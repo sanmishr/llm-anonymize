@@ -29,7 +29,7 @@ Configuration (env vars or .env file in current directory):
     GEMINI_API_KEY    — Gemini API key
     MINIMAX_API_KEY   — MiniMax API key
 
-Full docs: https://github.com/santzstudios/llm-anonymize
+Full docs: https://github.com/sanmishr/llm-anonymize
 """
 
 __version__ = "1.0.0"
