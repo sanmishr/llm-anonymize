@@ -21,8 +21,11 @@ version: 1.0.0
 
 1. Make the change in whichever repo triggered it
 2. **Copy to the other repo**: `cp anonymize.py <other-location>/anonymize.py`
-3. Run tests in both locations
-4. Commit both repos with matching commit messages
+3. If compliance logic changed, sync **both** compliance files:
+   - This repo: `compliance.py` (SQLite, standalone)
+   - Toolkit: `tools/anonymize_compliance.py` (PostgreSQL, uses `pa_common`)
+4. Run tests in both locations
+5. Commit both repos with matching commit messages
 
 ## Supported Providers
 
