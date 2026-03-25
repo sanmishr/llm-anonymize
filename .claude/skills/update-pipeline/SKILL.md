@@ -6,26 +6,26 @@ version: 1.0.0
 
 # Update Anonymization Pipeline
 
-`anonymize.py` exists in TWO locations that must stay in sync:
-1. **This repo** — open-source standalone (`/home/santz/Documents/llm-anonymize/anonymize.py`)
-2. **Toolkit copy** — used by all projects (`/home/santz/Documents/local-ai-toolkit/tools/anonymize.py`)
-
 ## When to Use
 
-- Any change to `anonymize.py` in either location
+- Any change to `anonymize.py`
 - Adding a new cloud LLM provider
 - Fixing anonymization/de-anonymization bugs
 - Updating entity detection patterns
 
-## Sync Workflow
+## Key Files
 
-1. Make the change in whichever repo triggered it
-2. **Copy to the other repo**: `cp anonymize.py <other-location>/anonymize.py`
-3. If compliance logic changed, sync **both** compliance files:
-   - This repo: `compliance.py` (SQLite, standalone)
-   - Toolkit: `tools/anonymize_compliance.py` (PostgreSQL, uses `pa_common`)
-4. Run tests in both locations
-5. Commit both repos with matching commit messages
+| File | Purpose |
+|------|---------|
+| `anonymize.py` | Core pipeline: anonymize → cloud LLM → de-anonymize |
+| `compliance.py` | GDPR/EU AI Act audit logging (optional) |
+| `.env.example` | API keys and config vars |
+
+## After Changes
+
+1. Run `python anonymize.py anonymize --json` with test input to verify entity detection
+2. Run `python anonymize.py pipeline --provider <provider>` to verify end-to-end
+3. If compliance logic changed, test with `ANONYMIZE_COMPLIANCE=1`
 
 ## Supported Providers
 

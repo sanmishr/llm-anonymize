@@ -20,10 +20,6 @@ anonymize.py pipeline()
             └── anon_compliance_log table (SQLite default / PostgreSQL optional)
 ```
 
-Two copies exist and must stay in sync:
-1. **This repo** — standalone (`/home/santz/Documents/llm-anonymize/compliance.py`) — SQLite, zero deps
-2. **Toolkit copy** — (`/home/santz/Documents/local-ai-toolkit/tools/anonymize_compliance.py`) — PostgreSQL via `pa_common`
-
 ## Key Files
 
 | File | Purpose |
@@ -31,14 +27,6 @@ Two copies exist and must stay in sync:
 | `compliance.py` | Standalone module: logging, DSAR, purge, reporting, CLI |
 | `anonymize.py` | Core pipeline — calls `compliance.log_pipeline_call()` when enabled |
 | `.env.example` | Config vars: `ANONYMIZE_COMPLIANCE`, `COMPLIANCE_DB`, `DATABASE_URL` |
-
-Toolkit-specific (not in this repo):
-| File | Purpose |
-|------|---------|
-| `tools/anonymize_compliance.py` | PostgreSQL version using `pa_common.get_conn()` |
-| `tools/anonymize_migrate.py` | DB migration runner |
-| `services/postgresql/init/12-create-compliance-tables.sql` | PostgreSQL schema |
-| `harness/checks/compliance_audit.py` | Enforces `processing_purpose` on pipeline callers |
 
 ## GDPR Coverage
 
@@ -50,7 +38,7 @@ Toolkit-specific (not in this repo):
 | Art. 17 | Right to erasure | `purge_subject(identifier)` |
 | Art. 20 | Data portability | `export_subject(identifier)` → JSON |
 | Art. 30 | Processing records | `log_processing()`, `summary()`, `ropa_report()` |
-| Art. 35 | DPIA | Template at `docs/compliance/dpia-anonymization.md` (toolkit) |
+| Art. 35 | DPIA | Create a DPIA document for your deployment |
 
 ## EU AI Act Coverage
 
@@ -58,7 +46,7 @@ Toolkit-specific (not in this repo):
 |---------|---------|---------------|
 | Art. 52 | Transparency | `ai_model_used` + `ai_model_version` (Ollama digest) in every record |
 | Annex III | Risk classification | `risk_level` field: `minimal`, `low`, `high` |
-| Art. 49 | Record-keeping | AI system card at `docs/compliance/ai-system-card.md` (toolkit) |
+| Art. 49 | Record-keeping | Document model capabilities and limitations in an AI system card |
 
 ## Storage
 
@@ -134,14 +122,7 @@ result = pipeline(
 ### Changing retention defaults
 - Env var: `COMPLIANCE_RETENTION` (default: 90 days)
 - Per-call: `retention_days` parameter in `pipeline()` or `log_processing()`
-- Toolkit cron: `pa_cron.py compliance-purge` runs daily at 04:00
-
-### Sync with toolkit
-The open-source version (this repo) uses SQLite + self-contained DB logic.
-The toolkit version uses `pa_common.get_conn()` + PostgreSQL + harness checks.
-When changing compliance logic, update BOTH:
-1. `compliance.py` (this repo — SQLite)
-2. `tools/anonymize_compliance.py` (toolkit — PostgreSQL)
+- Cron: call `purge_expired()` on a schedule (e.g., daily)
 
 ## Failures & Lessons
 
