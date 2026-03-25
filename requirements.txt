@@ -1,2 +1,4 @@
 openai>=1.0
 requests
+# Optional: for PostgreSQL backend (SQLite works by default)
+# psycopg2-binary

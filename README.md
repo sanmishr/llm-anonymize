@@ -230,7 +230,107 @@ Edit the `ANONYMIZE_PROMPT` in `anonymize.py`. Add your category to the numbered
 
 **Is the mapping stored anywhere?**
 
-Only in memory during execution. Use `--json` to capture it, or save `result["mapping"]` in your code. Nothing is written to disk unless you explicitly save it.
+Only in memory during execution. Use `--json` to capture it, or save `result["mapping"]` in your code. Nothing is written to disk unless you explicitly save it (or you enable compliance logging — see below).
+
+## GDPR & EU AI Act Compliance
+
+Optional audit layer that logs every `pipeline()` call with structured metadata required by GDPR Article 30 and EU AI Act Article 52. Zero config — uses SQLite by default, PostgreSQL optional.
+
+### Enable
+
+```bash
+# Set the env var (or add to .env)
+export ANONYMIZE_COMPLIANCE=1
+
+# That's it. Every pipeline() call is now logged.
+```
+
+### What Gets Logged
+
+Every `pipeline()` call records (no raw text — only a SHA-256 hash):
+
+| Field | GDPR Article | Example |
+|-------|-------------|---------|
+| Processing purpose | Art. 30 | `"meeting_analysis"` |
+| Lawful basis | Art. 6 | `"legitimate_interest"` |
+| Recipients | Art. 30 | `["deepseek"]` |
+| Entity categories | Art. 30 | `["PERSON", "COMPANY"]` |
+| Entity count | Art. 30 | `3` |
+| Retention period | Art. 17 | `90` days |
+| AI model used | EU AI Act Art. 52 | `"qwen3:32b"` |
+| Risk level | EU AI Act | `"low"` |
+
+### Pipeline with Compliance
+
+```python
+from anonymize import pipeline
+
+result = pipeline(
+    "Review Acme's architecture with John",
+    provider="deepseek",
+    processing_purpose="architecture_review",   # GDPR Art. 30
+    lawful_basis="legitimate_interest",          # GDPR Art. 6
+    risk_level="low",                            # EU AI Act
+    subject_identifier="john@acme.com",          # For DSAR lookups
+)
+```
+
+```bash
+# CLI
+echo "Review Acme's proposal" | python anonymize.py pipeline \
+  --provider deepseek \
+  --purpose architecture_review \
+  --subject john@acme.com
+```
+
+### Data Subject Rights (DSAR)
+
+```bash
+# Art. 15 — Right of access: what data was processed?
+python compliance.py query-subject john@acme.com
+
+# Art. 17 — Right to erasure: delete all records
+python compliance.py purge-subject john@acme.com
+
+# Art. 20 — Data portability: export as JSON
+python compliance.py export-subject john@acme.com
+```
+
+### Reporting
+
+```bash
+# Processing summary (last 30 days)
+python compliance.py summary --days 30
+
+# Full Record of Processing Activities (ROPA) — Art. 30
+python compliance.py ropa --days 365
+
+# Purge expired records (retention cleanup)
+python compliance.py purge-expired
+python compliance.py purge-expired --dry-run  # preview
+```
+
+### Storage
+
+- **Default**: SQLite at `~/.llm-anonymize/compliance.db` (zero config)
+- **PostgreSQL**: Set `DATABASE_URL=postgresql://user:pass@host/db`
+- **Custom path**: Set `COMPLIANCE_DB=/path/to/compliance.db`
+
+### Python API
+
+```python
+from compliance import (
+    enable,           # Turn on logging
+    is_enabled,       # Check if logging is active
+    summary,          # Processing summary dict
+    ropa_report,      # ROPA as markdown string
+    query_subject,    # Art. 15: list of records for a subject
+    purge_subject,    # Art. 17: erase subject's records
+    export_subject,   # Art. 20: JSON export
+    purge_expired,    # Retention cleanup
+    log_processing,   # Manual logging (advanced)
+)
+```
 
 ## License
 

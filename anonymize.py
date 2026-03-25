@@ -32,7 +32,7 @@ Configuration (env vars or .env file in current directory):
 Full docs: https://github.com/sanmishr/llm-anonymize
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 import json
 import os
@@ -328,6 +328,14 @@ def pipeline(
     model: str | None = None,
     max_tokens: int = 2048,
     extra_entities: list[str] | None = None,
+    # GDPR/EU AI Act compliance (optional)
+    processing_purpose: str = "general",
+    lawful_basis: str = "legitimate_interest",
+    risk_level: str = "low",
+    subject_identifier: str | None = None,
+    consent_reference: str | None = None,
+    caller_module: str | None = None,
+    retention_days: int | None = None,
 ) -> dict:
     """
     Full pipeline: anonymize → cloud LLM → de-anonymize.
@@ -339,6 +347,13 @@ def pipeline(
         model: Override provider's default model.
         max_tokens: Max response tokens.
         extra_entities: Terms to force-anonymize.
+        processing_purpose: GDPR Art. 30 — why this data is being processed.
+        lawful_basis: GDPR Art. 6 — legal basis (default: legitimate_interest).
+        risk_level: EU AI Act — minimal, low, or high.
+        subject_identifier: For DSAR lookups (Art. 15/17).
+        consent_reference: Consent record ID when basis is consent.
+        caller_module: Which module invoked pipeline().
+        retention_days: Override default retention period.
 
     Returns:
         dict with keys: response, anonymized_text, mapping, raw_cloud_response
@@ -354,6 +369,25 @@ def pipeline(
     )
 
     final_response = deanonymize(raw_response, anon["mapping"])
+
+    # GDPR/EU AI Act compliance logging (if enabled)
+    try:
+        from compliance import log_pipeline_call
+        log_pipeline_call(
+            text, provider, anon["mapping"],
+            processing_purpose=processing_purpose,
+            lawful_basis=lawful_basis,
+            risk_level=risk_level,
+            subject_identifier=subject_identifier,
+            consent_reference=consent_reference,
+            caller_module=caller_module,
+            retention_days=retention_days,
+            model=model,
+        )
+    except ImportError:
+        pass  # compliance module not installed
+    except Exception:
+        logger.warning("Compliance logging failed — pipeline continues.")
 
     return {
         "response": final_response,
@@ -407,6 +441,12 @@ def main():
     p_pipe.add_argument("--entities", nargs="+", metavar="TERM", help="Force-catch terms")
     p_pipe.add_argument("--file", help="Input file (default: stdin)")
     p_pipe.add_argument("--json", action="store_true", dest="json_output", help="Full JSON output")
+    # GDPR/EU AI Act compliance
+    p_pipe.add_argument("--purpose", default="general", help="Processing purpose (GDPR Art. 30)")
+    p_pipe.add_argument("--lawful-basis", default="legitimate_interest", help="Lawful basis (GDPR Art. 6)")
+    p_pipe.add_argument("--risk-level", default="low", choices=["minimal", "low", "high"], help="EU AI Act risk level")
+    p_pipe.add_argument("--subject", help="Data subject identifier (for DSAR)")
+    p_pipe.add_argument("--retention-days", type=int, help="Retention period in days")
 
     args = parser.parse_args()
 
@@ -445,6 +485,12 @@ def main():
             model=args.model,
             max_tokens=args.max_tokens,
             extra_entities=args.entities,
+            processing_purpose=args.purpose,
+            lawful_basis=args.lawful_basis,
+            risk_level=args.risk_level,
+            subject_identifier=args.subject,
+            retention_days=args.retention_days,
+            caller_module="cli",
         )
 
         if args.json_output:
