@@ -5,12 +5,12 @@ Each lesson feeds into: (1) relevant SKILL.md, (2) CLAUDE.md known failures.
 
 ---
 
-## 2026-02-28: Two-Repo Sync Risk
+## 2026-02-28: Internal Path Leak
 
-**What:** `anonymize.py` lives in both this repo and `local-ai-toolkit/tools/`. Changes in one must be mirrored to the other.
-**Fix:** Documented in `update-pipeline` skill. Always sync both in same session.
+**What:** Skill files and CLAUDE.md contained hardcoded paths to a private machine. Open-source repos must not reference internal infrastructure.
+**Fix:** Scrub all files with `grep -rn "/home/" .` before pushing. No absolute paths in public repos.
 
 ## 2026-03-08: Embedding Timeout Cascade
 
-**What:** The toolkit copy of anonymize.py is used by `pa_common.py` which had a 30s embedding timeout. Not directly this repo's bug, but downstream impact of the pipeline being used in production.
-**Lesson:** Open-source version is standalone, but the toolkit copy lives in a production system with tighter constraints. Test both contexts.
+**What:** Downstream integrations of the pipeline can have tighter constraints (e.g., timeouts). The standalone version works fine, but production deployments may need tuning.
+**Lesson:** Test the pipeline in the deployment context, not just standalone.
